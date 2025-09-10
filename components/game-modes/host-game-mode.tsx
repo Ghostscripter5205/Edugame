@@ -44,35 +44,43 @@ interface HostGameModeProps {
 export function HostGameMode({ game }: HostGameModeProps) {
   const router = useRouter()
   const [gameCode] = useState(() => Math.random().toString(36).substring(2, 8).toUpperCase())
-  const [players, setPlayers] = useState<Player[]>([
-    {
-      id: "host",
-      name: "You (Host)",
-      avatar: "H",
-      isHost: true,
-      joinedAt: new Date().toISOString(),
-    },
-  ])
+  const [players, setPlayers] = useState<Player[]>([])
   const [gameStarted, setGameStarted] = useState(false)
   const [showCopied, setShowCopied] = useState(false)
 
-  // Store this game session in localStorage so others can join
-  useEffect(() => {
-    const gameSession = {
-      id: game.id,
-      code: gameCode,
-      host: "You (Host)",
-      players: players,
-      status: "waiting",
-      createdAt: new Date().toISOString(),
-    }
-    localStorage.setItem(`gameSession_${gameCode}`, JSON.stringify(gameSession))
+  const hostPlayer: Player = {
+    id: "host",
+    name: "You (Host)",
+    avatar: "H",
+    isHost: true,
+    joinedAt: new Date().toISOString(),
+  }
 
-    // Clean up on unmount
-    return () => {
-      localStorage.removeItem(`gameSession_${gameCode}`)
+  // Initialize game session in localStorage
+  useEffect(() => {
+    const sessionKey = `gameSession_${gameCode}`
+    const existingSession = JSON.parse(localStorage.getItem(sessionKey) || "{}")
+
+    // Add host if not in session
+    if (!existingSession.players?.find((p: Player) => p.id === hostPlayer.id)) {
+      existingSession.players = [hostPlayer]
+      existingSession.id = game.id
+      existingSession.code = gameCode
+      existingSession.status = "waiting"
+      existingSession.createdAt = new Date().toISOString()
+      localStorage.setItem(sessionKey, JSON.stringify(existingSession))
     }
-  }, [gameCode, game.id, players])
+
+    setPlayers(existingSession.players || [hostPlayer])
+
+    // Poll localStorage for updates every second
+    const interval = setInterval(() => {
+      const session = JSON.parse(localStorage.getItem(sessionKey) || "{}")
+      if (session.players) setPlayers(session.players)
+    }, 1000)
+
+    return () => clearInterval(interval)
+  }, [gameCode, game.id])
 
   const copyGameCode = async () => {
     try {
@@ -86,21 +94,28 @@ export function HostGameMode({ game }: HostGameModeProps) {
 
   const startGame = () => {
     setGameStarted(true)
-    // In a real implementation, this would start the multiplayer game
+    const sessionKey = `gameSession_${gameCode}`
+    const session = JSON.parse(localStorage.getItem(sessionKey) || "{}")
+    session.status = "started"
+    localStorage.setItem(sessionKey, JSON.stringify(session))
     router.push(`/game/${game.id}?mode=multiplayer&code=${gameCode}`)
   }
 
   const removePlayer = (playerId: string) => {
-    setPlayers((prev) => prev.filter((p) => p.id !== playerId))
+    const sessionKey = `gameSession_${gameCode}`
+    const session = JSON.parse(localStorage.getItem(sessionKey) || "{}")
+    session.players = session.players.filter((p: Player) => p.id !== playerId)
+    localStorage.setItem(sessionKey, JSON.stringify(session))
+    setPlayers(session.players)
   }
 
   return (
     <div className="min-h-screen bg-background py-8">
       <div className="container mx-auto px-4 max-w-4xl">
+        {/* Header */}
         <div className="flex items-center gap-4 mb-8">
           <Button variant="ghost" onClick={() => router.push(`/play/${game.id}`)}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
+            <ArrowLeft className="w-4 h-4 mr-2" /> Back
           </Button>
           <div>
             <h1 className="text-3xl font-bold flex items-center gap-2">
@@ -111,8 +126,8 @@ export function HostGameMode({ game }: HostGameModeProps) {
           </div>
         </div>
 
+        {/* Game Code & Info */}
         <div className="grid md:grid-cols-2 gap-6 mb-8">
-          {/* Game Code Card */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -134,7 +149,6 @@ export function HostGameMode({ game }: HostGameModeProps) {
             </CardContent>
           </Card>
 
-          {/* Game Info Card */}
           <Card>
             <CardHeader>
               <CardTitle>Game Information</CardTitle>
@@ -142,15 +156,11 @@ export function HostGameMode({ game }: HostGameModeProps) {
             <CardContent className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Subject</span>
-                <Badge variant="outline" className="capitalize">
-                  {game.subject}
-                </Badge>
+                <Badge variant="outline" className="capitalize">{game.subject}</Badge>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Difficulty</span>
-                <Badge variant="outline" className="capitalize">
-                  {game.difficulty}
-                </Badge>
+                <Badge variant="outline" className="capitalize">{game.difficulty}</Badge>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Questions</span>
@@ -169,12 +179,10 @@ export function HostGameMode({ game }: HostGameModeProps) {
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               <span className="flex items-center gap-2">
-                <Users className="w-5 h-5" />
-                Players ({players.length})
+                <Users className="w-5 h-5" /> Players ({players.length})
               </span>
               <Badge variant="outline" className="flex items-center gap-1">
-                <UserPlus className="w-3 h-3" />
-                Waiting for players...
+                <UserPlus className="w-3 h-3" /> Waiting for players...
               </Badge>
             </CardTitle>
           </CardHeader>
@@ -214,16 +222,6 @@ export function HostGameMode({ game }: HostGameModeProps) {
                 </div>
               ))}
             </div>
-
-            {players.length === 1 && (
-              <div className="text-center py-8 text-muted-foreground">
-                <UserPlus className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p className="text-lg font-medium mb-2">Waiting for players to join...</p>
-                <p className="text-sm">
-                  Share the game code <strong>{gameCode}</strong> with your friends
-                </p>
-              </div>
-            )}
           </CardContent>
         </Card>
 
@@ -236,8 +234,7 @@ export function HostGameMode({ game }: HostGameModeProps) {
                 <p className="text-sm text-muted-foreground">You need at least 2 players to start the game</p>
               </div>
               <Button onClick={startGame} disabled={players.length < 2} size="lg" className="px-8">
-                <Play className="w-4 h-4 mr-2" />
-                Start Game
+                <Play className="w-4 h-4 mr-2" /> Start Game
               </Button>
             </div>
           </CardContent>

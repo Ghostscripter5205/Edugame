@@ -19,9 +19,6 @@ interface GameData {
   id: string
   title: string
   description: string
-  subject: string
-  difficulty: string
-  questions: any[]
   createdBy: string
   createdAt: string
   isPublic: boolean
@@ -37,25 +34,24 @@ export default function WaitingRoomPage() {
   const [game, setGame] = useState<GameData | null>(null)
   const [players, setPlayers] = useState<Player[]>([])
 
-  const playerId = Date.now() // unique for this user
-  const playerName = localStorage.getItem("eduGame_username") || `Player${Math.floor(Math.random() * 1000)}`
-  const isHost = false // or determine based on the game creator
+  const playerId = Date.now()
+  const playerName = localStorage.getItem("username") || `Player${Math.floor(Math.random() * 1000)}`
+  const isHost = false
 
-  // Join the game session
+  // Join session
   const joinSession = () => {
     if (!code) return
     const sessionKey = `gameSession_${code}`
     const session = JSON.parse(localStorage.getItem(sessionKey) || "{}")
     if (!session.players) session.players = []
 
-    // Add player if not already in session
     if (!session.players.find((p: Player) => p.id === playerId)) {
       session.players.push({ id: playerId, name: playerName, isHost, avatar: playerName[0] })
       localStorage.setItem(sessionKey, JSON.stringify(session))
     }
   }
 
-  // Poll for session updates
+  // Poll session updates
   useEffect(() => {
     if (!code) return
     joinSession()
@@ -77,11 +73,12 @@ export default function WaitingRoomPage() {
   const startGame = () => {
     if (game) router.push(`/game/${game.id}?mode=multiplayer&code=${gameCode}`)
   }
+
   const leaveGame = () => router.push("/lobby")
 
   return (
     <div className="min-h-screen bg-background">
-      {/* header */}
+      {/* Header */}
       <header className="border-b border-border bg-card/50 backdrop-blur-sm">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <Button variant="ghost" size="sm" onClick={leaveGame}>
@@ -96,12 +93,13 @@ export default function WaitingRoomPage() {
         </div>
       </header>
 
-      {/* main content */}
+      {/* Main */}
       <div className="container mx-auto px-4 py-12">
         <div className="max-w-4xl mx-auto">
-          <h1 className="text-4xl font-bold mb-4">{game?.title || "Math Challenge"}</h1>
+          <h1 className="text-4xl font-bold mb-4">{game?.title || "Waiting Room"}</h1>
 
           <div className="grid lg:grid-cols-3 gap-8">
+            {/* Players List */}
             <div className="lg:col-span-2">
               <Card>
                 <CardHeader>
@@ -129,12 +127,13 @@ export default function WaitingRoomPage() {
               </Card>
             </div>
 
+            {/* Game Status */}
             <div className="space-y-6">
               <Card>
                 <CardHeader><CardTitle>Game Status</CardTitle></CardHeader>
                 <CardContent>
                   {players.find((p) => p.id === playerId && p.isHost) ? (
-                    <Button onClick={startGame} className="w-full">Start Game</Button>
+                    <Button onClick={startGame} className="w-full"><Play className="w-4 h-4 mr-2" /> Start Game</Button>
                   ) : (
                     <Button className="w-full" disabled>Waiting for Host</Button>
                   )}
