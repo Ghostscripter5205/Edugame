@@ -1,0 +1,12 @@
+{
+  "/_not-found/page": "app/_not-found/page.js",
+  "/game/[gameId]/page": "app/game/[gameId]/page.js",
+  "/lobby/page": "app/lobby/page.js",
+  "/create/page": "app/create/page.js",
+  "/game/team/[gameId]/page": "app/game/team/[gameId]/page.js",
+  "/lobby/waiting/page": "app/lobby/waiting/page.js",
+  "/page": "app/page.js",
+  "/dashboard/page": "app/dashboard/page.js",
+  "/spectate/[gameId]/page": "app/spectate/[gameId]/page.js",
+  "/play/[gameId]/page": "app/play/[gameId]/page.js"
+}
