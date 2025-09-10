@@ -22,11 +22,13 @@ export default function HomePage() {
   }
 
   const handleStartPlaying = () => {
-    router.push("/lobby")
+    router.push("/browse")
   }
 
   const handleLogoClick = () => {
-    if (user && (user.username === "The_dev01" || user.username === "The_dev02")) {
+    if (user && user.username === "The_dev01") {
+      router.push("/owner")
+    } else if (user && user.username === "The_dev02") {
       router.push("/dev")
     }
   }
@@ -45,7 +47,11 @@ export default function HomePage() {
               }`}
               onClick={handleLogoClick}
               title={
-                user && (user.username === "The_dev01" || user.username === "The_dev02") ? "Access Developer Panel" : ""
+                user && user.username === "The_dev01"
+                  ? "Access Owner Panel"
+                  : user && user.username === "The_dev02"
+                    ? "Access Developer Panel"
+                    : ""
               }
             >
               <BookOpen className="w-5 h-5 text-primary-foreground" />
